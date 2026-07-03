@@ -1,82 +1,92 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { UserProfile } from '../types';
-import { useAuth } from './AuthContext';
+import { STORAGE_KEYS } from '../constants';
 import { api } from '../services/api';
 
+function generateId(): string {
+  return 'local_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 9);
+}
+
 interface UserContextType {
-  userId: string | null;
-  profile: UserProfile | null;
+  userId: string;
+  profile: UserProfile;
   onboarded: boolean;
   loading: boolean;
-  setupUser: (profile: Omit<UserProfile, 'id'>) => Promise<void>;
+  saveProfile: (p: UserProfile) => Promise<void>;
   updateProfile: (fields: Partial<UserProfile>) => Promise<void>;
-  markOnboarded: () => Promise<void>;
 }
+
+const DEFAULT_PROFILE: UserProfile = {
+  id: '',
+  country: '',
+  diet_preference: '',
+  allergies: [],
+  activity_level: 'moderate',
+  health_goal: 'general_health',
+  units: 'metric',
+  name: '',
+  email: '',
+};
 
 const UserContext = createContext<UserContextType | null>(null);
 
 export function UserProvider({ children }: { children: ReactNode }) {
-  const { user, loading: authLoading } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [onboarded, setOnboarded] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (authLoading) return;
-
-    if (!user) {
-      setProfile(null);
-      setOnboarded(false);
-      setLoading(false);
-      return;
-    }
-
-    const loadProfile = async () => {
+    const init = async () => {
       try {
-        const data = await api.getMe();
-        setProfile({
-          id: data.userId,
-          name: data.name || user.displayName || '',
-          email: data.email || user.email || '',
-          country: data.country || '',
-          diet_preference: data.diet_preference || '',
-          allergies: data.allergies || [],
-          activity_level: data.activity_level || '',
-          health_goal: data.health_goal || '',
-          units: (data.units as 'metric' | 'imperial') || 'metric',
-        });
-        setOnboarded(!!data.country);
-      } catch (error) {
-        if (__DEV__) console.error('Error loading profile:', error);
+        const raw = await AsyncStorage.getItem(STORAGE_KEYS.USER_PROFILE);
+        if (raw) {
+          const parsed: UserProfile = JSON.parse(raw);
+          setProfile(parsed);
+        }
+      } catch {
+        await AsyncStorage.removeItem(STORAGE_KEYS.USER_PROFILE);
       } finally {
         setLoading(false);
       }
     };
+    init();
+  }, []);
 
-    loadProfile();
-  }, [user, authLoading]);
+  const syncToApi = useCallback(async (p: UserProfile) => {
+    try {
+      await api.updateProfile(p);
+    } catch {
+      // offline — ignore
+    }
+  }, []);
 
-  const setupUser = async (fields: Omit<UserProfile, 'id'>) => {
-    if (!user) return;
-    const full: UserProfile = { id: user.uid, ...fields };
-    await api.setupProfile(full);
-    setProfile(full);
-  };
+  const saveProfile = useCallback(async (p: UserProfile) => {
+    const final = { ...p };
+    if (!final.id) final.id = generateId();
+    setProfile(final);
+    await AsyncStorage.setItem(STORAGE_KEYS.USER_PROFILE, JSON.stringify(final));
+    syncToApi(final);
+  }, [syncToApi]);
 
-  const updateProfile = async (fields: Partial<UserProfile>) => {
-    if (!profile || !user) return;
+  const updateProfile = useCallback(async (fields: Partial<UserProfile>) => {
+    if (!profile) return;
     const updated = { ...profile, ...fields };
-    await api.updateProfile(updated);
     setProfile(updated);
-  };
+    await AsyncStorage.setItem(STORAGE_KEYS.USER_PROFILE, JSON.stringify(updated));
+    syncToApi(updated);
+  }, [profile, syncToApi]);
 
-  const markOnboarded = async () => {
-    setOnboarded(true);
+  const value: UserContextType = {
+    userId: profile?.id || '',
+    profile: profile || DEFAULT_PROFILE,
+    onboarded: !!(profile?.name && profile?.email && profile?.country && profile?.diet_preference),
+    loading,
+    saveProfile,
+    updateProfile,
   };
 
   return (
-    <UserContext.Provider value={{ userId: user?.uid || null, profile, onboarded, loading, setupUser, updateProfile, markOnboarded }}>
+    <UserContext.Provider value={value}>
       {children}
     </UserContext.Provider>
   );

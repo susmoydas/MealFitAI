@@ -11,5 +11,6 @@ web-build/
 .env
 .env.*
 build-*.apk
+build-*.aab
 android/
 ios/

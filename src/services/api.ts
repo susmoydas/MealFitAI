@@ -1,27 +1,13 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
 const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'https://mealfit-api.workers.dev';
 
-let authToken: string | null = null;
-
 export const api = {
-  setToken(token: string | null) {
-    authToken = token;
-  },
-
   async request<T>(path: string, options: RequestInit = {}): Promise<T> {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      ...(options.headers as Record<string, string> || {}),
-    };
-
-    if (authToken) {
-      headers['Authorization'] = `Bearer ${authToken}`;
-    }
-
     const response = await fetch(`${API_BASE}${path}`, {
       ...options,
-      headers,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(options.headers as Record<string, string> || {}),
+      },
     });
 
     if (!response.ok) {
@@ -30,46 +16,6 @@ export const api = {
     }
 
     return response.json();
-  },
-
-  // Auth
-  async signup(email: string, name: string) {
-    const result = await this.request<{ ok: boolean; token: string; userId: string; email: string; name: string }>(
-      '/api/auth/signup',
-      { method: 'POST', body: JSON.stringify({ email, name }) }
-    );
-    authToken = result.token;
-    await AsyncStorage.setItem('@mealfit_token', result.token);
-    return result;
-  },
-
-  async login(email: string) {
-    const result = await this.request<{ ok: boolean; token: string; userId: string; email: string; name: string }>(
-      '/api/auth/login',
-      { method: 'POST', body: JSON.stringify({ email }) }
-    );
-    authToken = result.token;
-    await AsyncStorage.setItem('@mealfit_token', result.token);
-    return result;
-  },
-
-  async getMe() {
-    return this.request<{
-      userId: string; email: string; name: string; country: string;
-      diet_preference: string; allergies: string[]; activity_level: string;
-      health_goal: string; units: string;
-    }>('/api/auth/me');
-  },
-
-  async logout() {
-    authToken = null;
-    await AsyncStorage.removeItem('@mealfit_token');
-  },
-
-  async loadToken() {
-    const token = await AsyncStorage.getItem('@mealfit_token');
-    if (token) authToken = token;
-    return token;
   },
 
   // User

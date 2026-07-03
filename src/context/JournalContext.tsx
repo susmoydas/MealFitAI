@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Meal, NutritionLevel } from '../types';
-import { useAuth } from './AuthContext';
+import { useUser } from './UserContext';
 import { api } from '../services/api';
 
 export interface JournalEntry {
@@ -143,7 +143,7 @@ async function saveOfflineLogs(logs: JournalEntry[]): Promise<void> {
 const JournalContext = createContext<JournalContextType | null>(null);
 
 export function JournalProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { userId } = useUser();
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -178,12 +178,12 @@ export function JournalProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!user) {
+    if (!userId) {
       setEntries([]);
       return;
     }
-    loadEntries(user.uid);
-  }, [user, loadEntries]);
+    loadEntries(userId);
+  }, [userId, loadEntries]);
 
   const todayEntries = useMemo(() => {
     const now = new Date();

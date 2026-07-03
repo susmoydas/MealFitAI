@@ -115,7 +115,28 @@ export const SHADOWS = {
 };
 
 export const MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack'] as const;
-export const DIET_OPTIONS = ['omnivore', 'vegetarian', 'vegan', 'pescatarian'] as const;
+export const FOOD_PREFERENCES = [
+  { value: 'omnivore', label: 'Non-Vegetarian' },
+  { value: 'vegetarian', label: 'Vegetarian' },
+  { value: 'vegan', label: 'Vegan' },
+  { value: 'pescatarian', label: 'Pescatarian' },
+  { value: 'halal', label: 'Halal' },
+  { value: 'keto', label: 'Keto' },
+  { value: 'low_carb', label: 'Low Carb' },
+  { value: 'other', label: 'Other' },
+] as const;
+
+export const DIET_OPTIONS = FOOD_PREFERENCES.map(p => p.value) as readonly string[];
+export const HEALTH_GOALS = [
+  { value: 'general_health', label: 'General Health' },
+  { value: 'lose_weight', label: 'Lose Weight' },
+  { value: 'gain_weight', label: 'Gain Weight' },
+  { value: 'build_muscle', label: 'Build Muscle' },
+  { value: 'maintain_weight', label: 'Maintain Weight' },
+  { value: 'more_energy', label: 'More Energy' },
+  { value: 'better_digestion', label: 'Better Digestion' },
+  { value: 'other', label: 'Other' },
+] as const;
 export const COUNTRIES = [
   { code: 'BD', name: 'Bangladesh' },
   { code: 'IN', name: 'India' },

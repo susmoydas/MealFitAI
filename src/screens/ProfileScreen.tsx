@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
-import { View, ScrollView, TouchableOpacity, Alert, Switch } from 'react-native';
+import { View, ScrollView, TouchableOpacity, Alert, Switch, Modal, FlatList, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
-  User, Settings, Globe, ChefHat, Target, Activity,
+  User, Globe, ChefHat, Target, Activity,
   AlertTriangle, ChevronRight, Droplets, Apple, Heart,
   Bell, UtensilsCrossed, Wine, Salad, Footprints, Sun,
+  X, Check,
 } from 'lucide-react-native';
 import { useUser } from '../context/UserContext';
-import { COUNTRIES, DIET_OPTIONS } from '../constants';
-import { Text, Card, CardContent, Icon, Avatar, AvatarFallback, Separator, Badge } from '../components/ui';
+import { COUNTRIES, FOOD_PREFERENCES, HEALTH_GOALS } from '../constants';
+import { Text, Card, CardContent, Icon, Badge, Separator } from '../components/ui';
 
 export function ProfileScreen() {
   const { userId, profile, updateProfile } = useUser();
@@ -17,29 +18,30 @@ export function ProfileScreen() {
     meal: true, water: true, nutrition: true, walking: false, weather: true, fruit: false,
   });
 
-  if (!profile) {
-    return (
-      <SafeAreaView className='bg-background flex-1' edges={['top', 'bottom']}>
-        <View className='flex-1 items-center justify-center p-6'>
-          <Icon as={User} size={48} className='text-muted-foreground mb-4' />
-          <Text variant='h4'>No profile loaded</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  // Edit modals
+  const [editName, setEditName] = useState(false);
+  const [nameInput, setNameInput] = useState('');
+  const [editCountry, setEditCountry] = useState(false);
+  const [editFood, setEditFood] = useState(false);
 
-  const updateField = async (field: string, value: string) => {
+  const countryLabel = COUNTRIES.find(c => c.code === profile.country)?.name || profile.country || 'Not set';
+  const foodLabel = FOOD_PREFERENCES.find(p => p.value === profile.diet_preference)?.label || profile.diet_preference || 'Not set';
+  const goalLabel = HEALTH_GOALS.find(g => g.value === profile.health_goal)?.label || profile.health_goal || 'Not set';
+
+  const saveName = async () => {
+    const trimmed = nameInput.trim();
+    if (!trimmed) { Alert.alert('Error', 'Name cannot be empty.'); return; }
     setSaving(true);
-    try {
-      await updateProfile({ ...profile, [field]: value });
-    } catch {
-      Alert.alert('Error', 'Could not update profile.');
-    } finally {
-      setSaving(false);
-    }
+    await updateProfile({ name: trimmed });
+    setSaving(false);
+    setEditName(false);
   };
 
-  const countryLabel = COUNTRIES.find(c => c.code === profile.country)?.name || profile.country;
+  const saveField = async (field: string, value: string) => {
+    setSaving(true);
+    await updateProfile({ [field]: value });
+    setSaving(false);
+  };
 
   return (
     <SafeAreaView className='bg-background flex-1' edges={['top']}>
@@ -52,7 +54,9 @@ export function ProfileScreen() {
               </Text>
             </View>
             <View className='flex-1'>
-              <Text variant='h4' className='text-foreground'>{profile.name || 'User'}</Text>
+              <TouchableOpacity onPress={() => { setNameInput(profile.name || ''); setEditName(true); }}>
+                <Text variant='h4' className='text-foreground'>{profile.name || 'Tap to set name'}</Text>
+              </TouchableOpacity>
               <Text variant='muted' className='text-sm'>ID: {userId?.slice(0, 8)}...</Text>
               <Badge variant='outline' className='self-start mt-1'>
                 <Text className='text-xs'>{profile.units === 'metric' ? 'Metric' : 'Imperial'}</Text>
@@ -67,8 +71,28 @@ export function ProfileScreen() {
 
           <Card className='mb-3'>
             <CardContent className='p-0'>
-              <SettingsRow icon={Globe} label='Region' value={countryLabel} />
-              <SettingsRow icon={ChefHat} label='Diet Preference' value={profile.diet_preference ? profile.diet_preference.charAt(0).toUpperCase() + profile.diet_preference.slice(1) : 'Omnivore'} last />
+              <TouchableOpacity
+                onPress={() => setEditCountry(true)}
+                className='flex-row items-center gap-3 px-4 py-3.5 border-b border-border/50'
+              >
+                <View className='bg-muted size-8 items-center justify-center rounded-lg'>
+                  <Icon as={Globe} size={16} className='text-foreground' />
+                </View>
+                <Text className='text-foreground flex-1'>Region</Text>
+                <Text variant='muted' className='text-sm mr-1'>{countryLabel}</Text>
+                <Icon as={ChevronRight} size={14} className='text-muted-foreground' />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setEditFood(true)}
+                className='flex-row items-center gap-3 px-4 py-3.5'
+              >
+                <View className='bg-muted size-8 items-center justify-center rounded-lg'>
+                  <Icon as={ChefHat} size={16} className='text-foreground' />
+                </View>
+                <Text className='text-foreground flex-1'>Food Preference</Text>
+                <Text variant='muted' className='text-sm mr-1'>{foodLabel}</Text>
+                <Icon as={ChevronRight} size={14} className='text-muted-foreground' />
+              </TouchableOpacity>
             </CardContent>
           </Card>
 
@@ -76,9 +100,31 @@ export function ProfileScreen() {
 
           <Card className='mb-3'>
             <CardContent className='p-0'>
-              <SettingsRow icon={Target} label='Health Goal' value={profile.health_goal ? profile.health_goal.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'General Health'} />
-              <SettingsRow icon={Activity} label='Activity Level' value={profile.activity_level ? profile.activity_level.charAt(0).toUpperCase() + profile.activity_level.slice(1).replace('_', ' ') : 'Moderate'} />
-              <SettingsRow icon={Droplets} label='Units' value={profile.units === 'metric' ? 'Metric (kg, cm)' : 'Imperial (lb, ft)'} last />
+              <View className='flex-row items-center gap-3 px-4 py-3.5 border-b border-border/50'>
+                <View className='bg-muted size-8 items-center justify-center rounded-lg'>
+                  <Icon as={Target} size={16} className='text-foreground' />
+                </View>
+                <Text className='text-foreground flex-1'>Health Goal</Text>
+                <Text variant='muted' className='text-sm mr-1'>{goalLabel}</Text>
+              </View>
+              <View className='flex-row items-center gap-3 px-4 py-3.5 border-b border-border/50'>
+                <View className='bg-muted size-8 items-center justify-center rounded-lg'>
+                  <Icon as={Activity} size={16} className='text-foreground' />
+                </View>
+                <Text className='text-foreground flex-1'>Activity Level</Text>
+                <Text variant='muted' className='text-sm mr-1'>
+                  {profile.activity_level ? profile.activity_level.charAt(0).toUpperCase() + profile.activity_level.slice(1).replace('_', ' ') : 'Moderate'}
+                </Text>
+              </View>
+              <View className='flex-row items-center gap-3 px-4 py-3.5'>
+                <View className='bg-muted size-8 items-center justify-center rounded-lg'>
+                  <Icon as={Droplets} size={16} className='text-foreground' />
+                </View>
+                <Text className='text-foreground flex-1'>Units</Text>
+                <Text variant='muted' className='text-sm mr-1'>
+                  {profile.units === 'metric' ? 'Metric (kg, cm)' : 'Imperial (lb, ft)'}
+                </Text>
+              </View>
             </CardContent>
           </Card>
 
@@ -100,14 +146,6 @@ export function ProfileScreen() {
             </>
           )}
 
-          <Text className='text-muted-foreground text-xs font-semibold uppercase tracking-wider mb-3'>Preferences</Text>
-
-          <Card className='mb-6'>
-            <CardContent className='p-0'>
-              <SettingsRow icon={Heart} label='Dietary Options' value={`${DIET_OPTIONS.length} available`} last />
-            </CardContent>
-          </Card>
-
           <Text className='text-muted-foreground text-xs font-semibold uppercase tracking-wider mb-3'>Notification Settings</Text>
 
           <Card className='mb-6'>
@@ -122,20 +160,102 @@ export function ProfileScreen() {
           </Card>
         </View>
       </ScrollView>
-    </SafeAreaView>
-  );
-}
 
-function SettingsRow({ icon, label, value, last }: { icon: any; label: string; value: string; last?: boolean }) {
-  return (
-    <TouchableOpacity className={`flex-row items-center gap-3 px-4 py-3.5 ${!last ? 'border-b border-border/50' : ''}`}>
-      <View className='bg-muted size-8 items-center justify-center rounded-lg'>
-        <Icon as={icon} size={16} className='text-foreground' />
-      </View>
-      <Text className='text-foreground flex-1'>{label}</Text>
-      <Text variant='muted' className='text-sm mr-1'>{value}</Text>
-      <Icon as={ChevronRight} size={14} className='text-muted-foreground' />
-    </TouchableOpacity>
+      {/* Edit Name Modal */}
+      <Modal visible={editName} animationType='fade' transparent>
+        <View className='flex-1 items-center justify-center bg-black/40 px-6'>
+          <View className='bg-background rounded-2xl w-full p-6'>
+            <Text variant='h4' className='mb-4'>Edit Name</Text>
+            <TextInput
+              className='border-border bg-background text-foreground h-10 w-full rounded-md border px-3 text-base'
+              value={nameInput}
+              onChangeText={setNameInput}
+              placeholder='Enter your name'
+              autoFocus
+            />
+            <View className='flex-row gap-3 mt-4 justify-end'>
+              <TouchableOpacity className='px-4 py-2' onPress={() => setEditName(false)}>
+                <Text className='text-muted-foreground'>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                className='bg-primary px-4 py-2 rounded-md'
+                onPress={saveName}
+              >
+                <Text className='text-primary-foreground font-medium'>{saving ? 'Saving...' : 'Save'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Edit Country Modal */}
+      <Modal visible={editCountry} animationType='slide' transparent>
+        <View className='flex-1 justify-end bg-black/40'>
+          <View className='bg-background rounded-t-2xl max-h-[60%]'>
+            <View className='flex-row items-center justify-between px-4 py-3 border-b border-border'>
+              <Text variant='h4'>Select Country</Text>
+              <TouchableOpacity onPress={() => setEditCountry(false)}>
+                <Icon as={X} size={20} className='text-muted-foreground' />
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={COUNTRIES}
+              keyExtractor={c => c.code}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  className={`flex-row items-center gap-3 px-4 py-3.5 ${profile.country === item.code ? 'bg-primary/5' : ''}`}
+                  onPress={() => {
+                    saveField('country', item.code);
+                    setEditCountry(false);
+                  }}
+                >
+                  <Text className={`flex-1 text-base ${profile.country === item.code ? 'text-primary font-medium' : 'text-foreground'}`}>
+                    {item.name}
+                  </Text>
+                  {profile.country === item.code && (
+                    <Icon as={Check} size={18} className='text-primary' />
+                  )}
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </View>
+      </Modal>
+
+      {/* Edit Food Preference Modal */}
+      <Modal visible={editFood} animationType='slide' transparent>
+        <View className='flex-1 justify-end bg-black/40'>
+          <View className='bg-background rounded-t-2xl max-h-[60%]'>
+            <View className='flex-row items-center justify-between px-4 py-3 border-b border-border'>
+              <Text variant='h4'>Food Preference</Text>
+              <TouchableOpacity onPress={() => setEditFood(false)}>
+                <Icon as={X} size={20} className='text-muted-foreground' />
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={FOOD_PREFERENCES as unknown as { value: string; label: string }[]}
+              keyExtractor={p => p.value}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  className={`flex-row items-center gap-3 px-4 py-3.5 ${profile.diet_preference === item.value ? 'bg-primary/5' : ''}`}
+                  onPress={() => {
+                    saveField('diet_preference', item.value);
+                    setEditFood(false);
+                  }}
+                >
+                  <Text className={`flex-1 text-base ${profile.diet_preference === item.value ? 'text-primary font-medium' : 'text-foreground'}`}>
+                    {item.label}
+                  </Text>
+                  {profile.diet_preference === item.value && (
+                    <Icon as={Check} size={18} className='text-primary' />
+                  )}
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </View>
+      </Modal>
+    </SafeAreaView>
   );
 }
 
