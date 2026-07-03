@@ -1,0 +1,59 @@
+{
+  "expo": {
+    "name": "MealFit AI",
+    "slug": "mealfit-ai",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1E7D50"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.mealfit.ai"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1E7D50"
+      },
+      "package": "com.mealfit.ai",
+      "versionCode": 1,
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "CAMERA",
+        "POST_NOTIFICATIONS"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "MealFit needs camera access for Food Scanner."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "MealFit needs location for weather-based meal suggestions."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#1E7D50"
+        }
+      ],
+      "expo-secure-store"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "b563c132-50d4-4e4f-85e8-c34aa03b48ba"
+      }
+    }
+  }
+}

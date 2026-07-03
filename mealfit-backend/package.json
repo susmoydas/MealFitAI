@@ -1,0 +1,17 @@
+{
+  "name": "mealfit-api",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:migrate": "wrangler d1 execute mealfit --file=schema.sql",
+    "db:seed": "wrangler d1 execute mealfit --file=seed.sql",
+    "db:reset": "wrangler d1 execute mealfit --command=\"DROP TABLE IF EXISTS users, meal_logs, meals, ingredient_replacements, meal_alternatives, notifications\" && npm run db:migrate && npm run db:seed"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240501.0",
+    "typescript": "^5.4.0",
+    "wrangler": "^4.86.0"
+  }
+}
