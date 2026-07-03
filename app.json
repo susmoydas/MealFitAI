@@ -25,7 +25,11 @@
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "CAMERA",
-        "POST_NOTIFICATIONS"
+        "POST_NOTIFICATIONS",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
       ]
     },
     "plugins": [
@@ -52,8 +56,9 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "b563c132-50d4-4e4f-85e8-c34aa03b48ba"
+        "projectId": "372ce4a3-ce33-42f6-9926-2470136451dd"
       }
-    }
+    },
+    "owner": "susmoy6"
   }
 }
