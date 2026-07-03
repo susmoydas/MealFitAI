@@ -122,11 +122,22 @@ export function RecipeLibraryScreen({ navigation }: any) {
         return;
       }
 
-      const apiRecipes = await fetchAllRecipes();
-      const combined = deduplicateByName([...apiRecipes, ...MOCK_MEALS]);
-      setAllRecipes(combined);
-      setOfflineCacheReady(true);
-      saveToCache(combined);
+      const apiPromise = fetchAllRecipes();
+      const timeoutPromise = new Promise<null>(resolve => setTimeout(() => resolve(null), 12000));
+      const apiRecipes = await Promise.race([apiPromise, timeoutPromise]);
+
+      if (apiRecipes && apiRecipes.length > 0) {
+        const combined = deduplicateByName([...apiRecipes, ...MOCK_MEALS]);
+        setAllRecipes(combined);
+        setOfflineCacheReady(true);
+        saveToCache(combined);
+      } else if (cached && cached.length > 0) {
+        setAllRecipes(cached);
+        setOfflineCacheReady(true);
+      } else {
+        setAllRecipes(MOCK_MEALS);
+        setOfflineCacheReady(true);
+      }
     } catch {
       const cached = await loadFromCache();
       if (cached && cached.length > 0) {

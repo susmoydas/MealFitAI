@@ -1,5 +1,5 @@
 import { Meal } from '../types';
-import { generateAdditionalImages } from './imageCache';
+import { fetchWithTimeout } from '../lib/utils';
 
 const BASE_URL = 'https://dummyjson.com/recipes';
 
@@ -44,12 +44,16 @@ export interface DummyJSONResponse {
 
 function generateImages(primaryImage: string, mealName?: string): string[] {
   const imgs = [primaryImage];
-  const seed = mealName
-    ? mealName.toLowerCase().replace(/[^a-z0-9]/g, '+')
-    : 'food';
+  const index = mealName
+    ? mealName.length % FOOD_IMAGE_URLS.length
+    : 0;
 
-  const shuffled = [...FOOD_IMAGE_URLS].sort(() => Math.random() - 0.5);
-  const extras = shuffled.filter(u => u !== primaryImage).slice(0, 4);
+  const extras: string[] = [];
+  for (let i = 0; i < 4; i++) {
+    const idx = (index + i) % FOOD_IMAGE_URLS.length;
+    const url = FOOD_IMAGE_URLS[idx];
+    if (url !== primaryImage) extras.push(url);
+  }
 
   return deduplicateUrls([...imgs, ...extras]).slice(0, 5);
 }
@@ -142,11 +146,10 @@ function determineSeasonTags(cuisine: string, tags: string[]): string[] {
 export const recipeApi = {
   async searchRecipes(query: string): Promise<Meal[]> {
     try {
-      const response = await fetch(`${BASE_URL}/search?q=${encodeURIComponent(query)}&limit=30`);
+      const response = await fetchWithTimeout(`${BASE_URL}/search?q=${encodeURIComponent(query)}&limit=30`);
       const data: DummyJSONResponse = await response.json();
       return data.recipes.map(convertToMeal);
-    } catch (error) {
-      console.error('Error searching recipes:', error);
+    } catch {
       return [];
     }
   },
@@ -154,33 +157,30 @@ export const recipeApi = {
   async getRecipeById(id: string): Promise<Meal | null> {
     try {
       const recipeId = id.replace('dummyjson-', '');
-      const response = await fetch(`${BASE_URL}/${recipeId}`);
+      const response = await fetchWithTimeout(`${BASE_URL}/${recipeId}`);
       const recipe: DummyJSONRecipe = await response.json();
       return convertToMeal(recipe);
-    } catch (error) {
-      console.error('Error getting recipe:', error);
+    } catch {
       return null;
     }
   },
 
   async getRandomRecipes(count: number = 10): Promise<Meal[]> {
     try {
-      const response = await fetch(`${BASE_URL}?limit=${count}`);
+      const response = await fetchWithTimeout(`${BASE_URL}?limit=${count}`);
       const data: DummyJSONResponse = await response.json();
       return data.recipes.map(convertToMeal);
-    } catch (error) {
-      console.error('Error getting random recipes:', error);
+    } catch {
       return [];
     }
   },
 
   async getRecipesByTag(tag: string): Promise<Meal[]> {
     try {
-      const response = await fetch(`${BASE_URL}/tag/${encodeURIComponent(tag)}?limit=30`);
+      const response = await fetchWithTimeout(`${BASE_URL}/tag/${encodeURIComponent(tag)}?limit=30`);
       const data: DummyJSONResponse = await response.json();
       return data.recipes.map(convertToMeal);
-    } catch (error) {
-      console.error('Error getting recipes by tag:', error);
+    } catch {
       return [];
     }
   },
@@ -189,8 +189,7 @@ export const recipeApi = {
     try {
       const tag = category.toLowerCase();
       return this.getRecipesByTag(tag);
-    } catch (error) {
-      console.error('Error getting recipes by category:', error);
+    } catch {
       return [];
     }
   },
@@ -208,37 +207,34 @@ export const recipeApi = {
         recipe.name.toLowerCase().includes('biscotti') ||
         recipe.ingredients.some(i => i.name.toLowerCase().includes('cookie') || i.name.toLowerCase().includes('biscuit'))
       );
-    } catch (error) {
-      console.error('Error getting cookie recipes:', error);
+    } catch {
       return [];
     }
   },
 
   async getRecipesByCuisine(cuisine: string): Promise<Meal[]> {
     try {
-      const response = await fetch(`${BASE_URL}?cuisine=${encodeURIComponent(cuisine)}&limit=30`);
+      const response = await fetchWithTimeout(`${BASE_URL}?cuisine=${encodeURIComponent(cuisine)}&limit=30`);
       const data: DummyJSONResponse = await response.json();
       return data.recipes.map(convertToMeal);
-    } catch (error) {
-      console.error('Error getting recipes by cuisine:', error);
+    } catch {
       return [];
     }
   },
 
   async getTags(): Promise<string[]> {
     try {
-      const response = await fetch(`${BASE_URL}/tags`);
+      const response = await fetchWithTimeout(`${BASE_URL}/tags`);
       const tags: string[] = await response.json();
       return tags;
-    } catch (error) {
-      console.error('Error getting tags:', error);
+    } catch {
       return [];
     }
   },
 
   async getAllCuisines(): Promise<{ cuisine: string; count: number }[]> {
     try {
-      const response = await fetch(`${BASE_URL}?limit=200`);
+      const response = await fetchWithTimeout(`${BASE_URL}?limit=200`);
       const data: DummyJSONResponse = await response.json();
       const counts: Record<string, number> = {};
       data.recipes.forEach(r => {

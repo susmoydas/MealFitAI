@@ -1,6 +1,6 @@
 import './global.css';
 import React, { useEffect } from 'react';
-import { StatusBar } from 'react-native';
+import { StatusBar, Appearance } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from './src/context/AuthContext';
 import { UserProvider, useUser } from './src/context/UserContext';
@@ -21,6 +21,12 @@ function AppContent() {
 }
 
 export default function App() {
+  useEffect(() => {
+    Appearance.setColorScheme('light');
+    StatusBar.setBarStyle('dark-content');
+    StatusBar.setBackgroundColor('#FFFFFF');
+  }, []);
+
   return (
     <SafeAreaProvider>
       <StatusBar barStyle='dark-content' backgroundColor='#FFFFFF' />

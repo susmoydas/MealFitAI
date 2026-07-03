@@ -79,7 +79,7 @@ export const dataService = {
 
       return scanResult;
     } catch (error) {
-      console.error('API identify failed, using offline result:', error);
+      if (__DEV__) console.error('API identify failed, using offline result:', error);
       return offlineCache.getScanResult();
     }
   },
